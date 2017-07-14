@@ -29,8 +29,7 @@ def main():
         If you are in the business of adding or removing sensors, you
         are in the right place!
 
-        --Variables:    Define any variables that you will need for
-        several sensors.
+        --Variables:    Define any variables that you will need for several sensors.
         --Sensors:      Instantiate the sensor objects.
         --Queue:        Add the sensors to the start/write/stop queue.
 
@@ -46,13 +45,34 @@ def main():
 
         ###############################################################
 
+        #Start all the sensors with their identical ".start()" methods.
+        for sensor in sensors:
+            try:
+                sensor.start()
+            except:
+                sensors.remove(sensor)
+                print(sensor.name, 'failed to start. It was kicked out of the queue.')
+            finally:
+                pass
+        
+        #This is the main loop that is going to be running for most of the flight.
+        flying = True
+        while flying:
+
+            #The following checks for a button push.
+            flying = not landing(trigger_pin)
+
+
     except KeyboardInterrupt:
         print('flight_controller_2.py was terminated by the user.')
 
     finally:
-        #Stop all the sensors.
+        #Shut all the sensors down.
+        for sensor in sensors:
+            sensor.stop()
 
         GPIO.cleanup()
+        print('Payload was recovered safely at', asctime())
 
 
 main()
