@@ -87,7 +87,7 @@ class AnalogSensor(Sensor):
         AnalogSensor(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
 
         --Name:     The sensor name that will appear in the title of the data file.
-        --Pin:      The channel of the MCP3008 to which the sensor will be connected. (see datasheet)
+        --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
         --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
 
         Assuming that the relationship between voltage and the desired unit is linear.
@@ -601,6 +601,7 @@ class Camera(Sensor):
 
     def stop(self):
         self.camera.close()
+        system('mv *.jpg pictures/')
         print('Camera stopped.')
 
 
