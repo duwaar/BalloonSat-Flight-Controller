@@ -17,17 +17,20 @@ def main():
     '''
     #------------------------------------------------------------------
 
-    #Here, the launch function awaits input from the user.
-    trigger_pin = 22
-    comfort_led = 29
-    launch(trigger_pin, comfort_led)
 
-    #This next bit is the startup procedure.
     try:
+        #Here, the launch function awaits input from the user.
+        trigger_pin = 22
+        comfort_led = 29
+        launch(trigger_pin, comfort_led)
+
+
         ###############################################################
         '''
-        If you are in the business of adding or removing sensors, you
-        are in the right place!
+        If you are in the business of adding or removing sensors, you are in the right
+        place!  To add a sensor, you must at least instantiate the object and add it
+        to the queue.  It may also be helpful to define some common variables if you
+        have, for example, several sensors that will use the same ADC chip.
 
         --Variables:    Define any variables that you will need for several sensors.
         --Sensors:      Instantiate the sensor objects.
@@ -36,40 +39,67 @@ def main():
         '''
 
         #Variables.
-        Vref = 5.46
+        Vref            = 5.46
+        CLK             = 16
+        Dout            = 15
+        Din             = 13
+        CS              = 11
+
 
         #Sensors.
+        camera          = Camera('Camera')
+        gps             = GPS('GPS')
+        thermocouple    = AnalogSensor('Outside_temp', Vref, CLK, Dout, Din, CS, [0,0,0], -250, 200)
 
         #Queue.
-        sensors = []
+        queue = [camera, gps, thermocouple]
 
         ###############################################################
 
-        #Start all the sensors with their identical ".start()" methods.
-        for sensor in sensors:
+
+        #Start all the sensors with their identically named "start()" methods, and kick
+        #them out if they give you any trouble.
+        for sensor in queue:
             try:
                 sensor.start()
             except:
-                sensors.remove(sensor)
+                queue.remove(sensor)
                 print(sensor.name, 'failed to start. It was kicked out of the queue.')
             finally:
                 pass
         
+
         #This is the main loop that is going to be running for most of the flight.
         flying = True
         while flying:
+            #Get all the data.
+            for sensor in queue:
+                sensor.write()
+
+            #Report success. Shout it from the rooftops . . . or from a balloon.
+            print('Data collected at', asctime())
+            blinky(comfort_led, 1)
 
             #The following checks for a button push.
             flying = not landing(trigger_pin)
 
 
+    #Here are statements for dealing with errors that the rest of the code cannot handle.
     except KeyboardInterrupt:
-        print('flight_controller_2.py was terminated by the user.')
+        print('The flight controller was terminated by the user.')
 
+
+    #Here is the shutdown procedure that must always take place.
     finally:
-        #Shut all the sensors down.
-        for sensor in sensors:
-            sensor.stop()
+        #We want to stop the sensors, but things may have gotten a bit out of hand by
+        #this time. Hence, the try: finally: statement.
+        try:
+            for sensor in queue:
+                sensor.stop()
+        except:
+            print('Failed to stop the sensors.')
+        finally:
+            pass
 
         GPIO.cleanup()
         print('Payload was recovered safely at', asctime())
