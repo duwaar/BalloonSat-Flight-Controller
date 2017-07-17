@@ -73,28 +73,25 @@ class Sensor(object):
         print('Method not defined for this subclass.')
 
 
-class AnalogSensor(Sensor):
+class MCP3008(Sensor):
     #######################################################
     '''
+    MCP3008(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
+
+    --Name:     The sensor name that will appear in the title of the data file.
+    --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
+    --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
+
+    Assuming that the relationship between voltage and the desired unit is linear.
+    --slope:    The slope of the relationship (found in a datasheet or through calibration).
+    --offset:   The offset of the relationship (found in a datasheet or through calibration).
+
     Several of my sensors produce some kind of analog output, so I
     decided that having this class would make the code look nicer.
     '''
     ########################################################
 
     def __init__(self, name, Vref, CLK, Dout, Din, CS, pin=[0,0,0], offset=0, slope=1):
-        #----------------------------------------
-        '''
-        AnalogSensor(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
-
-        --Name:     The sensor name that will appear in the title of the data file.
-        --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
-        --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
-
-        Assuming that the relationship between voltage and the desired unit is linear.
-        --slope:    The slope of the relationship (found in a datasheet or through calibration).
-        --offset:   The offset of the relationship (found in a datasheet or through calibration).
-        '''
-        #----------------------------------------
 
         #self.pin will correspond to the ADC pins of each temp sensor.
         self.name = name
@@ -306,6 +303,18 @@ class AnalogSensor(Sensor):
         #----------------------------------------
 
         print(self.name, 'has finished.')
+
+
+class DS1620(Sensor):
+    #######################################################
+    '''
+    This is a chip that measures temperature and can also be set up to act as
+    a thermostat, triggering one of three output pins when the temperature
+    passes a set threshold.
+    '''
+    #######################################################
+    
+    def __init__(self):
 
 
 class CountSensor(Sensor):
