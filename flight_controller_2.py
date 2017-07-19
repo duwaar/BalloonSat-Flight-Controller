@@ -40,16 +40,23 @@ def main():
 
         #Variables.
         Vref            = 5.46
-        CLK             = 16
-        Dout            = 15
-        Din             = 13
-        CS              = 11
 
+        CLK_1           = 16
+        Dout_1          = 15
+        Din_1           = 13
+        CS_1            = 11
+
+        '''
+        change these.
+        DQ_2            = 18
+        CLK_2           = 22
+        RST_2           = 29
+        '''
 
         #Sensors.
         camera          = Camera('Camera')
         gps             = GPS('GPS')
-        thermocouple    = AnalogSensor('Outside_temp', Vref, CLK, Dout, Din, CS, [0,0,0], -250, 200)
+        thermocouple    = MCP3008('Outside_temp', Vref, CLKu_1, Dout_1, Din_1, CS_1, [0,0,0], -250, 200)
 
         #Queue.
         queue = [camera, gps, thermocouple]
@@ -103,6 +110,8 @@ def main():
 
         GPIO.cleanup()
         print('Payload was recovered safely at', asctime())
+        for i in range(5):
+            blinky(comfort_led, 0.2)
 
 
 main()

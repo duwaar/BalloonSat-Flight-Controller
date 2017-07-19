@@ -73,28 +73,25 @@ class Sensor(object):
         print('Method not defined for this subclass.')
 
 
-class AnalogSensor(Sensor):
+class MCP3008(Sensor):
     #######################################################
     '''
+    MCP3008(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
+
+    --Name:     The sensor name that will appear in the title of the data file.
+    --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
+    --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
+
+    Assuming that the relationship between voltage and the desired unit is linear.
+    --slope:    The slope of the relationship (found in a datasheet or through calibration).
+    --offset:   The offset of the relationship (found in a datasheet or through calibration).
+
     Several of my sensors produce some kind of analog output, so I
     decided that having this class would make the code look nicer.
     '''
     ########################################################
 
     def __init__(self, name, Vref, CLK, Dout, Din, CS, pin=[0,0,0], offset=0, slope=1):
-        #----------------------------------------
-        '''
-        AnalogSensor(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
-
-        --Name:     The sensor name that will appear in the title of the data file.
-        --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
-        --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
-
-        Assuming that the relationship between voltage and the desired unit is linear.
-        --slope:    The slope of the relationship (found in a datasheet or through calibration).
-        --offset:   The offset of the relationship (found in a datasheet or through calibration).
-        '''
-        #----------------------------------------
 
         #self.pin will correspond to the ADC pins of each temp sensor.
         self.name = name
@@ -122,6 +119,10 @@ class AnalogSensor(Sensor):
         _clk() -> clock pin set high, then low
 
         This makes the code a bit cleaner.
+
+        * * * * * NOTE * * * * *
+        The MCP3008 considers a clock to be a rising edge, followed by a falling
+        edge. This is OPPOSITE to what the DS1620 considers a clock to be.
         '''
         #----------------------------------------
 
@@ -306,6 +307,109 @@ class AnalogSensor(Sensor):
         #----------------------------------------
 
         print(self.name, 'has finished.')
+
+
+class DS1620(Sensor):
+    #######################################################
+    '''
+    DS1620(name, DQ, CLK, RST) -> sensor object
+
+    Name is just what you want the sensor to be called. To understand the pin
+    assignments, see the datasheet. This is a chip that measures temperature
+    and can also be set up to act as a thermostat, triggering one of three
+    dedicated output pins when the temperature passes a set threshold.
+    '''
+    #######################################################
+    
+    def __init__(self, name, DQ, CLK, RST):
+
+        #Define variables.
+        self.name       = name
+
+        #Set up all the I/O pins.
+        self.DQ         = DQ
+        self.CLK        = CLK
+        self.RST        = RST
+
+        #GPIO.setup(self.DQ, GPIO.  ) I choose not to do this here for clarity:
+                #I will be changing the setup between in and out, and I would
+                #rather do that only where it is needed.
+        GPIO.setup(self.CLK, GPIO.OUT)
+        GPIO.setup(self.RST, GPIO.OUT)
+
+    def _clk(self):
+        #----------------------------------------
+        '''
+        _clk() -> clock pin set high, then low
+
+        This makes the code a bit cleaner.
+
+        * * * * * NOTE * * * * *
+        The DS1620 considers a clock to be a falling edge, followed by a rising
+        edge. This is OPPOSITE to what the MCP3008 considers a clock to be.
+        '''
+        #----------------------------------------
+
+        GPIO.output(self.CLK, False)
+        sleep(0.001)
+        GPIO.output(self.CLK, True)
+        sleep(0.001)
+
+
+    def _talk(self, command):
+        #----------------------------------------
+        '''
+        _talk(8-element list, bool) -> chat with the chip
+
+        When I say "command", what I mean is an 8-bit code that refers to one
+        of the registers available on the chip. (See the datasheet.) The
+        boolean value should be set to "True" if there is a message to listen
+        to following the command.
+        '''
+        #----------------------------------------
+
+        #All communications start with this.
+        #GPIO.output(self.RST, True)
+
+        #Clock-in the command.
+        GPIO.setup(self.DQ, GPIO.OUT)
+        sleep(0.1)
+
+        for bit in command:
+            print(bit, end='')
+            if bit == 1:
+                GPIO.output(self.DQ, True)
+            elif bit == 0:
+                GPIO.output(self.DQ, False)
+            else:
+                raise ValueError('Invalid command.')
+
+            GPIO.output(self.CLK, False)
+            sleep(0.001)
+            GPIO.output(self.CLK, True)
+            sleep(0.001)
+
+        print()
+
+
+    def _listen(self):
+        #Just listen.
+        GPIO.setup(self.DQ, GPIO.IN)
+        sleep(0.1)
+        for i in range(8):
+            GPIO.output(self.CLK, False)
+            sleep(0.001)
+
+            bit = GPIO.input(self.DQ)
+            print(bit, end='')
+
+            GPIO.output(self.CLK, True)
+            sleep(0.001)
+
+        print()
+
+        #All communications end thusly.
+        #GPIO.output(self.RST, False)
 
 
 class CountSensor(Sensor):
