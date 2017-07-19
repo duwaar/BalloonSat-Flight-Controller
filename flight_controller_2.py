@@ -44,9 +44,6 @@ def main():
         Dout_1          = 15
         Din_1           = 13
         CS_1            = 11
-        DQ_2            = 18
-        CLK_2           = 22
-        RST_2           = 29
 
         #Sensors.
         camera          = Camera('Camera')

@@ -119,6 +119,10 @@ class MCP3008(Sensor):
         _clk() -> clock pin set high, then low
 
         This makes the code a bit cleaner.
+
+        * * * * * NOTE * * * * *
+        The MCP3008 considers a clock to be a rising edge, followed by a falling
+        edge. This is OPPOSITE to what the DS1620 considers a clock to be.
         '''
         #----------------------------------------
 
@@ -303,18 +307,6 @@ class MCP3008(Sensor):
         #----------------------------------------
 
         print(self.name, 'has finished.')
-
-
-class DS1620(Sensor):
-    #######################################################
-    '''
-    This is a chip that measures temperature and can also be set up to act as
-    a thermostat, triggering one of three output pins when the temperature
-    passes a set threshold.
-    '''
-    #######################################################
-    
-    def __init__(self):
 
 
 class CountSensor(Sensor):
