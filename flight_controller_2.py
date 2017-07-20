@@ -10,6 +10,7 @@ Russell Jeffery
 
 from fl_objects_2 import *
 
+
 def main():
     #------------------------------------------------------------------
     '''
@@ -23,6 +24,10 @@ def main():
         trigger_pin = 22
         comfort_led = 29
         launch(trigger_pin, comfort_led)
+
+        #Here, the heater pin is defined and set up.
+        heater_pin = 33
+        GPIO.setup(heater_pin, GPIO.OUT)
 
 
         ###############################################################
@@ -40,24 +45,26 @@ def main():
 
         #Variables.
         Vref            = 5.46
-        CLK_1           = 16
-        Dout_1          = 15
-        Din_1           = 13
-        CS_1            = 11
+        CLK             = 16
+        Dout            = 15
+        Din             = 13
+        CS              = 11
 
         #Sensors.
         camera          = Camera('Camera')
         gps             = GPS('GPS')
-        thermocouple    = MCP3008('Outside_temp', Vref, CLKu_1, Dout_1, Din_1, CS_1, [0,0,0], -250, 200)
+        thermocouple    = MCP3008('Outside_temp', Vref, CLK, Dout, Din, CS, [0,0,0], '(volts - 1.25) / 0.005')
+        #convert volts to *F then *F to *C for the inside temp.
+        inside          = MCP3008('Inside_temp', Vref, CLK, Dout, Din, CS, [0,0,1], '((volts * 100) - 32) / 9 * 5')
 
         #Queue.
-        queue = [camera, gps, thermocouple]
+        queue = [gps, thermocouple, inside, camera] #If camera fails, the next thing in the queue gets messed up. IDK why.
 
         ###############################################################
 
 
-        #Start all the sensors with their identically named "start()" methods, and kick
-        #them out if they give you any trouble.
+        #Try to start all the sensors with their identically named "start()"
+        #methods, but kick them out if they give you any trouble.
         for sensor in queue:
             try:
                 sensor.start()
@@ -67,17 +74,30 @@ def main():
             finally:
                 pass
         
-
         #This is the main loop that is going to be running for most of the flight.
         flying = True
         while flying:
             #Get all the data.
             for sensor in queue:
-                sensor.write()
+                try:
+                    sensor.write()
+                except:
+                    print(sensor.name, 'raised an error.')
+                finally:
+                    pass
 
             #Report success. Shout it from the rooftops . . . or from a balloon.
             print('Data collected at', asctime())
             blinky(comfort_led, 1)
+
+            #Check the temperature, and turn on the heater if necesary.
+            try:
+                temp = inside.get()
+                heater(heater_pin, temp)
+            #except:
+                #print('The heater has failed.')
+            finally:
+                pass
 
             #The following checks for a button push.
             flying = not landing(trigger_pin)
@@ -92,18 +112,25 @@ def main():
     finally:
         #We want to stop the sensors, but things may have gotten a bit out of hand by
         #this time. Hence, the try: finally: statement.
-        try:
-            for sensor in queue:
+        for sensor in queue:
+            try:
                 sensor.stop()
-        except:
-            print('Failed to stop the sensors.')
-        finally:
-            pass
+            except:
+                print(sensor.name, 'failed while stopping.')
+            finally:
+                pass
 
-        GPIO.cleanup()
         print('Payload was recovered safely at', asctime())
         for i in range(5):
             blinky(comfort_led, 0.2)
 
+        #Put this at the end, ding-dong. You know, AFTER all the GPIO operations.
+        GPIO.cleanup()
+
+        system('mv *.txt data/')
+        system('mv *.jpg pictures/')
+        date_str = asctime().replace(' ', '-')
+        move = 'mv fc.out fc.out' + date_str + ' && mv fc.err fc.err' + date_str
+        system(move)
 
 main()
