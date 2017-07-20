@@ -10,6 +10,7 @@ Russell Jeffery
 
 import RPi.GPIO as GPIO
 import picamera
+import parser
 from gps3 import agps3
 from os import system, popen
 from time import time, sleep, asctime
@@ -76,22 +77,23 @@ class Sensor(object):
 class MCP3008(Sensor):
     #######################################################
     '''
-    MCP3008(string, float, pin, pin, pin, pin, 3-element list, 2-element list) -> sensor object
+    MCP3008(string, float, channel #, channel #, channel #, channel #, 3-element list, string) -> sensor object
 
     --Name:     The sensor name that will appear in the title of the data file.
-    --Pin:      The channel #, in binary, of the MCP3008 to which the sensor will be connected. (see datasheet)
-    --Vref:     The voltage applied to the reference pin of the MCP3008 (see datasheet)
+    --Vref:     The voltage applied to the reference pin of the MCP3008.
+    --Channels: The GPIO pins that will be connected to the I/O pins of the MCP3008.
+    --Pin:      The channel you want to read the sensor from in the form of a
+                    list, i.e. [0,1,0] is channel 2.
+    --conv:     The formula used to convert voltage to the measured units,
+                    i.e. '(volts - 1.25) // 0.005'
 
-    Assuming that the relationship between voltage and the desired unit is linear.
-    --slope:    The slope of the relationship (found in a datasheet or through calibration).
-    --offset:   The offset of the relationship (found in a datasheet or through calibration).
-
-    Several of my sensors produce some kind of analog output, so I
-    decided that having this class would make the code look nicer.
+    Several of my sensors produce some kind of analog output, so I decided that
+    having this class would make the code look nicer. If you have questions
+    about the IC, refer to the datasheet.
     '''
     ########################################################
 
-    def __init__(self, name, Vref, CLK, Dout, Din, CS, pin=[0,0,0], offset=0, slope=1):
+    def __init__(self, name, Vref, CLK, Dout, Din, CS, pin, conv):
 
         #self.pin will correspond to the ADC pins of each temp sensor.
         self.name = name
@@ -108,9 +110,10 @@ class MCP3008(Sensor):
         self.CS = CS
         GPIO.setup(self.CS, GPIO.OUT)
 
-        #These are for unit convertions.
-        self.slope = slope
-        self.offset = offset
+        #"conv" is a string that you want to run as code. This line
+        #compiles the string into code that can later be run by
+        #calling "eval(conv)".
+        self.conv = parser.expr(conv).compile()
 
 
     def _clk(self):
@@ -223,19 +226,6 @@ class MCP3008(Sensor):
         return file_name
 
 
-    def _volts_to_unit(self, volts):
-        #----------------------------------------
-        '''
-        _volts_to_unit(volts) -> float
-
-        This is the function that converts the voltage from the ADC
-        to units of pressure, temperature, etc.
-        '''
-        #----------------------------------------
-
-        units = volts * self.slope - self.offset
-        return units
- 
     def start(self):
         #----------------------------------------
         '''
@@ -267,13 +257,15 @@ class MCP3008(Sensor):
         #----------------------------------------
 
         #This reads the binary from the ADC chip.
-        raw = self._read_chip()
+        volts = self._read_chip()
 
-        #This converts the binary into human-readable, decimal units.
-        volts = self._volts_to_unit(raw)
+        #'conv' contains a piece of code. "eval()" runs the code, using
+        #variables from the environment (just "volts" in this case) and does
+        #whatever the code says to do.
+        reading = eval(self.conv)
 
         #And here is what you get.
-        return volts
+        return reading
 
        
     def write(self):
@@ -289,10 +281,10 @@ class MCP3008(Sensor):
         self.data_file = open(self.file_name, 'a')
 
         #collect the data.
-        volts = self.get()
+        reading = self.get()
 
         #write the data to the data file.
-        datum = str(asctime()) + ',' + str(volts) + '\n'
+        datum = str(asctime()) + ',' + str(reading) + '\n'
         self.data_file.write(datum)
         self.data_file.close()
 
@@ -571,15 +563,14 @@ class Camera(Sensor):
         self.name = name
 
     def start(self):
-        try:
-            self.camera = picamera.PiCamera()
-            print('Camera has started.')
-        except:
-            print('Camera failed to start.')
-        finally:
-            #The "finally" is needed so that the program continues if an
-            #exception is raised, but I don't actually need to do anything here.
-            pass
+        #----------------------------------------
+        '''
+        start() -> camera object is instantiated
+        '''
+        #----------------------------------------
+
+        self.camera = picamera.PiCamera()
+        print('Camera has started.')
 
     def write(self):
         #----------------------------------------
@@ -605,8 +596,6 @@ class Camera(Sensor):
         system('mv *.jpg pictures/')
         print('Camera stopped.')
 
-
-       
 
 
 def blinky(LED, speed):
@@ -662,8 +651,8 @@ def launch(trigger_pin, LED):
                 signal = True
 
     #Simulates all the comforts of the terminal.
-    GPIO.output(LED, True)
-    sleep(1)
+    for i in range(5):
+        blinky(LED, 0.2)
 
 
 def landing(trigger_pin):
@@ -707,11 +696,22 @@ def check_mem():
     return free 
    
 
-################################################
-'''
-Make something that controls the temperature
-inside the payload box.
-'''
-################################################
+def heater(heater_pin, temp):
+    #---------------------------------------- 
+    '''
+    heater(pin #, float) -> sets heater based on temperature
+
+    This simply turns the heater on or of depending on the
+    temperature criteria and data given.
+    '''
+    #---------------------------------------- 
+    #if temp <= 17:
+    if temp <= 25:
+        GPIO.output(heater_pin, True)
+        print('Heater is on.')
+    else:
+        GPIO.output(heater_pin, False)
+        print('Heater is off.')
+
 
 
