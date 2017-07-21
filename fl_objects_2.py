@@ -304,41 +304,35 @@ class MCP3008(Sensor):
 class CountSensor(Sensor):
     #######################################################
     '''
-    The GeigerCounter is set up to monitor a pin by waiting for
-    a pulse. It counts these pulses and writes the count to a file.
-
-    * * * * * IMPORTANT * * * * *
-    I have not figured out how to do this without global variables.
-    That means that you can only have ONE counter sensor per payload.
+    The CountSensor is set up to monitor a pin by waiting for
+    a pulse. It counts these pulses and writes the count to a file
+    along with the time during which the counts were measured.
     '''
     ########################################################
 
-    def __init__(self, name, pin):
+    def __init__(self, name, signal_pin):
+        self.name = name
 
         #set up the I/O pin
-        self.signalPin = pin
-        GPIO.setup(self.signalPin, GPIO.IN)
-
-        #I can't find a way to do the counter without global variables b/c 
-        #the event detection will only pass in the pin number as a parameter.
-        global COUNT
-        COUNT = 0
+        self.signal_pin = signal_pin
+        GPIO.setup(self.signal_pin, GPIO.IN)
 
 
-    def _signal(self, pin):
+    def _signal(self, signal_pin):
         #----------------------------------------
         '''
         _signal(pin)
 
-        Called when a rising edge is detected on the given pin. Adds
-        one to the running count of pulses since the previous reading.
+        Called when an edge of the specified type is detected on the
+        given pin. Adds one to the running count of pulses since the
+        previous reading.
         '''
         #----------------------------------------
 
         #grab those global variables
-        global COUNT
-        COUNT += 1
-        
+        self.count += 1
+        print('hit,', self.count)
+
 
     def start(self):
         #----------------------------------------
@@ -357,9 +351,9 @@ class CountSensor(Sensor):
         self.data_file.close()
 
         #set up the data variables and event detection.
-        GPIO.add_event_detect(self.signalPin, GPIO.RISING, callback=self._signal) #set up the event detection
-        global COUNT
+        GPIO.add_event_detect(self.signal_pin, GPIO.FALLING, callback=self._signal) #set up the event detection
         self.start_time = time()
+        self.count = 0
 
         #send a message
         print(self.name, 'has started.')
@@ -379,12 +373,16 @@ class CountSensor(Sensor):
 
         #This gets the change in time and the number of counts.
         sample_time = time() - self.start_time
-        global COUNT
 
-        #This calculates counts per minute.
-        CPM = COUNT / sample_time / 60
+        #This is the raw data.
+        data = [self.count, sample_time]
 
-        return CPM
+        #reset the data variables
+        self.start_time = time()
+        self.count = 0
+
+        print('Markers and small children', data)
+        return data
 
 
     def write(self):
@@ -397,19 +395,15 @@ class CountSensor(Sensor):
         #----------------------------------------
         
         #Get the data.
-        CPM = self.get()
+        data = self.get()
 
         #Open the file.
         self.data_file = open(self.file_name, 'a')
 
         #write comma delimited data to a file
-        report = asctime() + ',' + str(CPM) + '\n'
+        report = asctime() + ',' + str(data[0]) + ',' + str(data[1]) + '\n'
         self.data_file.write(report)
         self.data_file.close()
-
-        #reset the data variables
-        self.start_time = time()
-        COUNT = 0
 
 
     def stop(self):
@@ -705,8 +699,7 @@ def heater(heater_pin, temp):
     temperature criteria and data given.
     '''
     #---------------------------------------- 
-    #if temp <= 17:
-    if temp <= 25:
+    if temp <= 17:
         GPIO.output(heater_pin, True)
         print('Heater is on.')
     else:

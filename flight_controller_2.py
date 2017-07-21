@@ -21,8 +21,8 @@ def main():
 
     try:
         #Here, the launch function awaits input from the user.
-        trigger_pin = 22
-        comfort_led = 29
+        trigger_pin = 36
+        comfort_led = 37
         launch(trigger_pin, comfort_led)
 
         #Here, the heater pin is defined and set up.
@@ -44,21 +44,25 @@ def main():
         '''
 
         #Variables.
-        Vref            = 5.46
-        CLK             = 16
-        Dout            = 15
-        Din             = 13
-        CS              = 11
+        Vref            = 5.09
+        CLK             = 11
+        Dout            = 13
+        Din             = 15
+        CS              = 16
 
         #Sensors.
         camera          = Camera('Camera')
         gps             = GPS('GPS')
+        #geiger          = CountSensor('Geiger_counter', 7)
         thermocouple    = MCP3008('Outside_temp', Vref, CLK, Dout, Din, CS, [0,0,0], '(volts - 1.25) / 0.005')
         #convert volts to *F then *F to *C for the inside temp.
         inside          = MCP3008('Inside_temp', Vref, CLK, Dout, Din, CS, [0,0,1], '((volts * 100) - 32) / 9 * 5')
+        light           = MCP3008('Light', Vref, CLK, Dout, Din, CS, [0,1,0], 'volts')
+        pressure        = MCP3008('Pressure', Vref, CLK, Dout, Din, CS, [0,1,1], '(volts - 0.438) / 0.0046')
 
         #Queue.
-        queue = [gps, thermocouple, inside, camera] #If camera fails, the next thing in the queue gets messed up. IDK why.
+        #If camera fails, the next thing in the queue gets messed up. IDK why.
+        queue = [gps, thermocouple, inside, light, pressure, camera]
 
         ###############################################################
 
@@ -73,7 +77,7 @@ def main():
                 print(sensor.name, 'failed to start. It was kicked out of the queue.')
             finally:
                 pass
-        
+
         #This is the main loop that is going to be running for most of the flight.
         flying = True
         while flying:
@@ -81,8 +85,9 @@ def main():
             for sensor in queue:
                 try:
                     sensor.write()
-                except:
-                    print(sensor.name, 'raised an error.')
+                    print(sensor.name, sensor.get())
+                #except:
+                    #print(sensor.name, 'raised an error.')
                 finally:
                     pass
 
@@ -94,13 +99,17 @@ def main():
             try:
                 temp = inside.get()
                 heater(heater_pin, temp)
-            #except:
-                #print('The heater has failed.')
+            except:
+                print('The heater has failed.')
             finally:
                 pass
 
             #The following checks for a button push.
             flying = not landing(trigger_pin)
+
+            #Make the display easier to read.
+            sleep(1)
+            system('clear')
 
 
     #Here are statements for dealing with errors that the rest of the code cannot handle.
