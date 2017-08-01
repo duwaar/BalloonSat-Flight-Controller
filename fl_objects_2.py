@@ -699,9 +699,12 @@ def heater(heater_pin, temp):
     temperature criteria and data given.
     '''
     #---------------------------------------- 
-    if temp <= 17:
+    if temp <= 21:
         GPIO.output(heater_pin, True)
         print('Heater is on.')
+    elif temp >= 25:
+        GPIO.output(heater_pin, False)
+        print('Heater is off.')
     else:
         GPIO.output(heater_pin, False)
         print('Heater is off.')
