@@ -135,8 +135,5 @@ def main():
 
         system('mv *.txt data/')
         system('mv *.jpg pictures/')
-        date_str = asctime().replace(' ', '-')
-        move = 'mv fc.out fc.out' + date_str + ' && mv fc.err fc.err' + date_str
-        system(move)
 
 main()
