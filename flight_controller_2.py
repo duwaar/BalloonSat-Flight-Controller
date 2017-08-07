@@ -41,21 +41,24 @@ def main():
         CS              = 16
 
         #Sensors.
-        camera          = Camera('Camera')
-        gps             = GPS('GPS')
-        #geiger          = CountSensor('Geiger_counter', 7)
         #convert volts to *F then *F to *C for the inside temp.
         inside          = MCP3008('Inside_temp', Vref, CLK, Dout, Din, CS, [0,0,0], '((volts * 100) - 32) / 9 * 5')
         outside         = MCP3008('Outside_temp', Vref, CLK, Dout, Din, CS, [0,0,1], '(volts - 1.25) / 0.005')
         light           = MCP3008('Light', Vref, CLK, Dout, Din, CS, [0,1,0], 'volts')
         pressure        = MCP3008('Pressure', Vref, CLK, Dout, Din, CS, [0,1,1], '(volts - 0.438) / 0.0046')
+        gps             = GPS('GPS')
+        camera          = Camera('Camera')
 
         #Queue.
         #If camera fails, the next thing in the queue gets messed up. IDK why.
         #queue = [inside, outside, light, pressure, gps, camera]
-        queue = [inside, outside, light, pressure, camera]
+        queue = [inside, outside, light, pressure, gps, camera]
 
         ###############################################################
+
+        #Here the indicator LED is set up.
+        comfort_led = 37
+        GPIO.setup(comfort_led, GPIO.OUT)
 
         #Here, the heater pin is defined and set up.
         heater_pin = 33
@@ -98,10 +101,12 @@ def main():
             finally:
                 pass
 
+            blinky(comfort_led, 1)
+
             #Use the following (and a bit of code above) for debugging in the terminal.
             #Make the display easier to read.
-            sleep(1)
-            system('clear')
+            #sleep(1)
+            #system('clear')
 
 
     #Here are statements for dealing with errors that the rest of the code cannot handle.
