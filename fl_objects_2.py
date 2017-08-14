@@ -553,8 +553,10 @@ class Camera(Sensor):
     '''
     ########################################################
     
-    def __init__(self, name):
+    def __init__(self, name, vid_period=0, vid_length=10):
         self.name = name
+        self.vid_period = vid_period
+        self.vid_length = vid_length
 
     def start(self):
         #----------------------------------------
@@ -564,6 +566,7 @@ class Camera(Sensor):
         #----------------------------------------
 
         self.camera = picamera.PiCamera()
+        self.counter = 0
         print('Camera has started.')
 
     def write(self):
@@ -576,14 +579,34 @@ class Camera(Sensor):
         '''
         #----------------------------------------
 
+        self.counter += 1
+
         #generate a time stamp, replacing spaces with file-friendly underlines
         date_time = asctime().replace(' ', '_')
 
-        #each picture will have a unique name
-        name = 'picture_' + date_time + '.jpg'
+        if self.counter >= self.vid_period:
+            self.counter = 0
 
-        #take a picture
-        self.camera.capture(name)
+            #each video will have a unique name.
+            name = 'video_' + date_time + '.h264'
+
+            #get some video.
+            self.camera.start_recording(name)
+            self.camera.wait_recording(timeout=self.vid_length)
+            self.camera.stop_recording()
+
+            #convert the video to a useful format.
+            #this is commented out to save space in flight.
+            #command = 'avconv -i ' + name + ' -c copy video_' + date_time + '.mp4'
+            #system(command)
+
+        else:
+            #each picture will have a unique name
+            name = 'picture_' + date_time + '.jpg'
+
+            #take a picture
+            self.camera.capture(name)
+
 
     def stop(self):
         self.camera.close()
