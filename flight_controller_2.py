@@ -52,8 +52,7 @@ def main():
         #Queue.
         #If camera fails, the next thing in the queue gets messed up. IDK why.
         #queue = [inside, outside, light, pressure, gps, camera]
-        queue = [camera]
-
+        queue = [inside, outside, light, pressure, gps, camera]
 
         ###############################################################
 
@@ -101,6 +100,8 @@ def main():
                 print('The heater has failed.')
             finally:
                 pass
+
+            blinky(comfort_led, 1)
 
             #Use the following (and a bit of code above) for debugging in the terminal.
             #Make the display easier to read.
