@@ -4,7 +4,7 @@ This is the flight controller program for a high-altitude balloon.
 The classes contained herein allow for easy interface with various
 digital and analog sensors.
 
-Russell Jeffery
+Elaine Jeffery
 4 August 2016
 '''
 
