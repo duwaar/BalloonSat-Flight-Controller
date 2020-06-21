@@ -4,7 +4,7 @@ This is the flight controller program for a high-altitude balloon
 payload. The process herein allows for easy adding and removing of
 sensors, and simple, clear user interface on launch day.
 
-Russell Jeffery
+Elaine Jeffery
 14 July 2017
 '''
 
